@@ -1,71 +1,116 @@
-let canvasWidth = 1920; // same variable as w
-let canvasHeight = 1080; //same variable as h
-let x = 0;
+let particles = [];
+const gravity = .25;
+const colors = ['red', 'orange', 'yellow', 'lime', 'cyan', 'magenta', 'white'];
+let endColor;
+let houses;
 
 function setup() {
-  createCanvas(canvasWidth, canvasHeight); 
-  console.log(canvasWidth/2); //divides width in half
-  canvasWidth = canvasWidth + 1;
-  console.log(canvasWidth)
+	pixelDensity(1);
+	createCanvas(1500, 825);
+	endColor = color(64, 0);
+}
+
+
+function mousePressed() {
+	particles.push(new Firework(mouseX, height));
 }
 
 function draw() {
-  // let r = random(100,200); 
-  // let g = random(40);
-  // let b = random(200,255); 
-  // background( r, g, b ); //gives random a range of diff. colors
-  background( 'black' );
-  let n = 0;
-  while (n < 4) {
-    circle(frameCount*0.1, 75*n, 58, 20, 86,75); 
-    n++;
-  
-  // triangle(frameCount*0.1, 75, 58, 20, 86,75); 
-  circle(frameCount, 90, 60, 200, 150, 75);
-  circle(300, 100, 320,100, 310, 80);
-}
-    // ellipse(0, 50, 33, 33); 
+	background(64);
+	particles.forEach((p) => {
+		p.step();
+		p.draw();
+	});
+	particles = particles.filter((p) => p.isAlive);
 
-    // push(); 
-    // strokeWeight(10);
-    // fill(204, 153, 0);
-    // translate(50, 0);
-    // ellipse(0, 50, 33, 33);
-    // pop();
-
-    // ellipse(100, 50, 33, 33);
-
-    // ellipse(0, 50, 33, 33);
-
-    // push();
-    // strokeWeight(10);
-    // fill(204, 153, 0);
-    // ellipse(33, 50, 33, 33); 
-
-    // push();
-    // stroke(0, 102, 153);
-    // ellipse(66, 50, 33, 33);
-    // pop();
-    
-    // pop();
-
-    // ellipse(100, 50, 33, 33);
-  // if (x < 50) {
-  //   x++;
-  // } 
-  // pertains to let x = 0, which has our shape move and stop pixel at anything less than 200
-  // background( random (125)); flashing background
-  // Set colors
-  fill( 'white');
-  stroke(127, 63, 120);
 }
 
-function keyPressed() {
-  fill(random(255));
-} 
-  //   circle(frameCount*0.1, 75*n, 58, 20, 86,75); 
-  //   n++;
-  
-  // // triangle(frameCount*0.1, 75, 58, 20, 86,75); 
-  // circle(frameCount, 90, 60, 200, 150, 75);
-  // circle(300, 100, 320,100, 310, 80);
+class Particle {
+	constructor(x, y, xSpeed, ySpeed, pColor, size) {
+		this.x = x;
+		this.y = y;
+		this.xSpeed = xSpeed;
+		this.ySpeed = ySpeed;
+		this.color = pColor;
+		this.size = size;
+		this.isAlive = true;
+		this.trail = [];
+		this.trailIndex = 0;
+	}
+
+	step() {
+		this.trail[this.trailIndex] = createVector(this.x, this.y);
+		this.trailIndex++;
+		if (this.trailIndex > 10) {
+			this.trailIndex = 0;
+		}
+		this.x += this.xSpeed;
+		this.y += this.ySpeed;
+
+		this.ySpeed += gravity;
+
+		if (this.y > height) {
+			this.isAlive = false;
+		}
+	}
+
+	draw() {
+		this.drawTrail();
+		fill(this.color);
+		noStroke();
+		rect(this.x, this.y, this.size, this.size);
+
+	}
+
+	drawTrail() {
+		let index = 0;
+
+		for (let i = this.trailIndex - 1; i >= 0; i--) {
+			const tColor = lerpColor(color(this.color), endColor,
+				index / this.trail.length);
+			fill(tColor);
+			noStroke();
+			rect(this.trail[i].x, this.trail[i].y, this.size, this.size);
+			index++;
+		}
+
+		for (let i = this.trail.length - 1; i >= this.trailIndex; i--) {
+			const tColor = lerpColor(color(this.color), endColor,
+				index / this.trail.length);
+			fill(tColor);
+			noStroke();
+			rect(this.trail[i].x, this.trail[i].y, this.size, this.size);
+			index++;
+		}
+	}
+}
+
+class Firework extends Particle {
+	constructor(x, y) {
+		super(x, y, random(-2, 2), random(-10, -15),
+			random(colors), 10);
+		this.countdown = random(30, 60);
+	}
+
+	step() {
+		super.step();
+
+		this.countdown--;
+		if (this.countdown <= 0) {
+			const explosionSize = random(20, 50);
+			for (let i = 0; i < explosionSize; i++) {
+
+				const speed = random(5, 10);
+				const angle = random(TWO_PI);
+				const xSpeed = cos(angle) * speed;
+				const ySpeed = sin(angle) * speed;
+
+				particles.push(new Particle(this.x, this.y,
+					xSpeed, ySpeed,
+					this.color, 5
+				));
+			}
+			this.isAlive = false;
+		}
+	}
+}
